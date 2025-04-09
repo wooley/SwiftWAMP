@@ -81,6 +81,7 @@ enum WampMessages: Int {
 
     static func createMessage(_ payload: [Any]) -> WampMessage? {
         print("Payload num \(payload[0])")
+        print("message: \(payload)")
         if let messageType = WampMessages(rawValue: payload[0] as! Int) {
             if let messageFactory = mapping1[messageType] {
                 return messageFactory(Array(payload[1..<payload.count]))

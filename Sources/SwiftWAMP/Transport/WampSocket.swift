@@ -20,11 +20,6 @@ public typealias httpHeaderValue = String
  - parameter httpHeaders: [String formatted header name : String formatted header value] (Default: nil)
  */
 open class WampSocket: WebSocketDelegate, WampTransport {
-    public func didReceive(event: Starscream.WebSocketEvent, client: any Starscream.WebSocketClient) {
-        print("didReceive")
-    }
-    
-    
     public var delegate: WampTransportDelegate?
     let socket: WebSocket
     let mode: WebsocketMode
@@ -63,8 +58,7 @@ open class WampSocket: WebSocketDelegate, WampTransport {
     }
     
     // MARK: WebSocketDelegate
-    
-    public func didReceive(event: WebSocketEvent, client: WebSocket) {
+    public func didReceive(event: WebSocketEvent, client: WebSocketClient) {
         switch event {
         case .connected:
             delegate?.wampTransportDidConnect()

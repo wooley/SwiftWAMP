@@ -399,8 +399,72 @@ open class WampSession: WampTransportDelegate {
         
         var roles = [String: Any]()
         for role in self.supportedRoles {
-            // For now basic profile, (demands empty dicts)
-            roles[role.rawValue] = [:]
+            switch role {
+            case .Caller:
+                roles[role.rawValue] = [
+                    "features": [
+                        "call_canceling": true,
+                        "caller_identification": true,
+                        "payload_encryption_cryptobox": true,
+                        "payload_transparency": true,
+                        "progressive_call_results": true
+                    ]
+                ]
+            case .Callee:
+                roles[role.rawValue] = [
+                    "features": [
+                        "call_canceling": true,
+                        "caller_identification": true,
+                        "pattern_based_registration": true,
+                        "payload_encryption_cryptobox": true,
+                        "payload_transparency": true,
+                        "progressive_call_results": true,
+                        "registration_revocation": true,
+                        "shared_registration": true
+                    ]
+                ]
+            case .Publisher:
+                roles[role.rawValue] = [
+                    "features": [
+                        "payload_encryption_cryptobox": true,
+                        "payload_transparency": true,
+                        "publisher_exclusion": true,
+                        "publisher_identification": true,
+                        "subscriber_blackwhite_listing": true,
+                        "x_acknowledged_event_delivery": true
+                    ]
+                ]
+            case .Subscriber:
+                roles[role.rawValue] = [
+                    "features": [
+                        "pattern_based_subscription": true,
+                        "payload_encryption_cryptobox": true,
+                        "payload_transparency": true,
+                        "publisher_identification": true,
+                        "subscription_revocation": true
+                    ]
+                ]
+            case .Broker:
+                roles[role.rawValue] = [
+                    "features": [
+                        "pattern_based_subscription": true,
+                        "payload_encryption_cryptobox": true,
+                        "payload_transparency": true,
+                        "publisher_identification": true,
+                        "subscription_revocation": true
+                    ]
+                ]
+            case .Dealer:
+                roles[role.rawValue] = [
+                    "features": [
+                        "pattern_based_subscription": true,
+                        "payload_encryption_cryptobox": true,
+                        "payload_transparency": true,
+                        "publisher_identification": true,
+                        "subscription_revocation": true
+                    ]
+                ]
+            }
         }
         
         var details: [String: Any] = [:]
@@ -476,12 +540,28 @@ open class WampSession: WampTransportDelegate {
         // MARK: Call role
         
         case let message as ResultWampMessage:
+            print("ResultWampMessage:\(message)")
             let requestId = message.requestId
-            if let (callback, _) = self.callRequests.removeValue(forKey: requestId) {
+            
+            // 检查是否是进度更新
+            let isProgress = (message.details["progress"] as? Bool) ?? false
+            
+            if let (callback, _) = self.callRequests[requestId] {
+                print("callback \(message.results)")
                 callback?(message.details, message.results, message.kwResults)
                 delegate?.wampCallSuccessful(details: message.details, results: message.results, kwResults: message.kwResults)
+                
+                // 只有在非进度更新或完成状态时才移除回调
+                if !isProgress || (isProgress && (message.details["is_complete"] as? Bool) ?? false) {
+                    print("移除回调，请求ID: \(requestId)")
+                    self.callRequests.removeValue(forKey: requestId)
+                } else {
+                    print("保留回调以便处理后续进度更新，请求ID: \(requestId)")
+                }
             } else {
-                // TODO: log this erroneous situation
+                // 即使找不到回调，也尝试调用委托方法
+                delegate?.wampCallSuccessful(details: message.details, results: message.results, kwResults: message.kwResults)
+                print("警告: 找不到请求ID \(requestId) 的回调函数")
             }
             
         
